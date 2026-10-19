@@ -1,0 +1,33 @@
+# Reads the wholesalers' Telegram channels and sends new posts to the site.
+# Telegram is filtered in Iran, so this runs on GitHub's servers (free minutes) instead of the
+# Iranian host. The site decides which hours are check times (admin > تنظیمات), so running
+# every hour costs only about a minute per run.
+# Needs two repository secrets: APP_URL (the site address) and FETCHER_TOKEN (same as on the site).
+name: Telegram channels
+
+on:
+  schedule:
+    - cron: "20 4-16 * * *"        # every hour from 07:50 to 19:50 Tehran time
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Check now, even if it is not a check time"
+        type: boolean
+        default: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Read channels
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          FETCHER_TOKEN: ${{ secrets.FETCHER_TOKEN }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$FETCHER_TOKEN" ]; then echo "APP_URL / FETCHER_TOKEN not set yet"; exit 0; fi
+          python telegram_fetch.py ${{ inputs.force && '--force' || '' }}
